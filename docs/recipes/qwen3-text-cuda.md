@@ -42,6 +42,8 @@ an equivalence proof; 50 tasks so far): first answer proved on 39 tasks against 
   last-row logits within bf16 rounding, the next 48 tokens at 8k and 32k). The comparison above is against vLLM only.
 - None of that guide's speed stages; the prompt pass is the dense engine's default.
 - `n` above 1 and `logprobs` are refused by the server for this family, as for every dense recipe.
-- `text_weights.zig`'s byte count test is the formula's own value; `tensorfold info` reports 16,397,972,934 bytes for
-  the folder's safetensors files against the formula's 16,381,470,720, and the difference is not explained yet.
+- `tensorfold info` reports 16,397,972,934 bytes for this folder: that is every file in it but one of 1,570 bytes
+  (tokenizer, vocabulary and training logs included), not the tensors. The tensors are 16,381,470,720 bytes, summed
+  from the safetensors headers, which is `text_weights.zig`'s `textBytes` exactly; the engine loads 15.61 GiB with
+  its scratch.
 - Host tests (`zig build test`) have not been run on this branch; only the sm_89 server build.
