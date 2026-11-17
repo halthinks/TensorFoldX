@@ -164,7 +164,11 @@ pub fn open(a: Allocator, gpa: Allocator, io: std.Io, o: api.Open, problem: *[]c
     }
     if (std.mem.eql(u8, o.model_type, "fish_omni")) return openDrama(a, gpa, io, o, problem);
     if (std.mem.eql(u8, o.model_type, "qwen4") or std.mem.eql(u8, o.model_type, "qwen4_text")) return @import("qwen4_cuda.zig").open(a, gpa, io, o, problem);
-    if (std.mem.eql(u8, o.model_type, "qwen3")) return @import("cuda_qwen3.zig").open(a, gpa, io, o, problem, budget, windows);
+    if (std.mem.eql(u8, o.model_type, "qwen3")) {
+        // a folder with a sentence-transformers head is an embedding or reranker checkpoint; any other is a text model
+        if (!qwen3HasHead(io, o.dir)) return openWith(@import("qwen3_text_cuda").native, a, gpa, io, o, problem);
+        return @import("cuda_qwen3.zig").open(a, gpa, io, o, problem, budget, windows);
+    }
     inline for (registry) |F| if (std.mem.eql(u8, o.model_type, F.model_type)) return openWith(F, a, gpa, io, o, problem);
     if (std.mem.eql(u8, o.model_type, lfm2.family.model_type)) {
         if (refusals.lfm2(o)) |why| {
@@ -175,6 +179,16 @@ pub fn open(a: Allocator, gpa: Allocator, io: std.Io, o: api.Open, problem: *[]c
     }
     problem.* = try std.fmt.allocPrint(a, "the native CUDA engine has no backend for {s} checkpoints yet", .{o.model_type});
     return null;
+}
+/// Whether a Qwen3 folder declares a pooling or logit-score head (families/qwen3/head.zig reads them).
+fn qwen3HasHead(io: std.Io, dir: []const u8) bool {
+    var d = std.Io.Dir.cwd().openDir(io, dir, .{}) catch return false;
+    defer d.close(io);
+    for ([_][]const u8{ "1_Pooling/config.json", "1_LogitScore/config.json" }) |f| {
+        d.access(io, f, .{}) catch continue;
+        return true;
+    }
+    return false;
 }
 fn openWith(comptime F: type, a: Allocator, gpa: Allocator, io: std.Io, o: api.Open, problem: *[]const u8) !?api.Opened {
     if (refusals.family(F, o)) |why| {

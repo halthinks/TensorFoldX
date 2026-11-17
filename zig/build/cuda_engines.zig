@@ -27,6 +27,11 @@ pub fn glmCudaShared(b: *std.Build, target: std.Build.ResolvedTarget, optimize: 
     return m;
 }
 
+/// Qwen3 text checkpoints (Qwen3ForCausalLM, BF16) on CUDA: the Qwen3 recipe over the dense engine.
+pub fn qwen3TextModule(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, cuda: *std.Build.Module, core: *std.Build.Module, lanes: *std.Build.Module, dense: *std.Build.Module) *std.Build.Module {
+    return b.createModule(.{ .root_source_file = b.path("zig/src/families/qwen3/text_cuda.zig"), .target = target, .optimize = optimize, .link_libc = true, .imports = &.{ .{ .name = "cuda", .module = cuda }, .{ .name = "core", .module = core }, .{ .name = "lanes", .module = lanes }, .{ .name = "cuda_dense", .module = dense } } });
+}
+
 /// Qwen3's dense embedding and reranker checkpoints on CUDA: the family module the native server's open dispatches to.
 pub fn qwen3Module(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, cuda: *std.Build.Module, core: *std.Build.Module, lanes: *std.Build.Module, api: *std.Build.Module) *std.Build.Module {
     const m = b.createModule(.{ .root_source_file = b.path("zig/src/families/qwen3/qwen3_cuda.zig"), .target = target, .optimize = optimize, .link_libc = true });
@@ -66,6 +71,7 @@ pub fn engines(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.bu
     const api = qwen35.import_table.get("engine_api").?; // family()'s, so the server and qwen3_5 share one
     const canon = canonModule(b, target, optimize);
     const verbs = @import("tp.zig").verbsModule(b, target, optimize);
+    const dense = @import("cuda_dense.zig").module(b, target, optimize, cuda, core, lanes);
     const mod = b.createModule(.{
         .root_source_file = b.path("zig/src/native/cuda.zig"),
         .target = target,
@@ -89,7 +95,8 @@ pub fn engines(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.bu
             .{ .name = "spark25", .module = @import("spark25.zig").module(b, target, optimize, cuda, core, lanes) },
             .{ .name = "lfm2_moe_cuda", .module = @import("lfm2_moe_cuda.zig").module(b, target, optimize, cuda, core, lanes) },
             .{ .name = "dory", .module = @import("dory.zig").module(b, target, optimize, cuda, core, lanes) },
-            .{ .name = "dots_mocr_cuda", .module = @import("dots_mocr_cuda.zig").module(b, target, optimize, cuda, core, lanes, @import("cuda_dense.zig").module(b, target, optimize, cuda, core, lanes)) },
+            .{ .name = "dots_mocr_cuda", .module = @import("dots_mocr_cuda.zig").module(b, target, optimize, cuda, core, lanes, dense) },
+            .{ .name = "qwen3_text_cuda", .module = qwen3TextModule(b, target, optimize, cuda, core, lanes, dense) },
         },
     });
     mod.addImport("qwen4", @import("qwen4.zig").module(b, target, optimize, core));
