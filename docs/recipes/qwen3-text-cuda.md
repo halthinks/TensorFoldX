@@ -33,8 +33,8 @@ Greedy output against vLLM on one 259-token prompt: the first 13 tokens are equa
 best tokens are 0.125 apart in log probability (one bf16 step at that magnitude).
 
 Task accuracy (FVEval-Verified NL-to-SVA, 4 sampled answers a task at temperature 0.8 and top-p 0.95, each judged by
-an equivalence proof; 50 tasks so far): first answer proved on 39 tasks against vLLM's 41, any of four on 45 against
-45, 161 of 200 answers proved against 162.
+an equivalence proof; 61 tasks): first answer proved on 49 tasks against vLLM's 50, any of four on 55 against 55,
+197 of 244 answers proved against 196.
 
 ## Not done
 
