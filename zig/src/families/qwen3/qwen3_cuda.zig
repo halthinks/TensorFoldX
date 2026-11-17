@@ -1,4 +1,4 @@
-//! Qwen3 dense checkpoints on the CUDA backend: the folder's head, the prompt lane and the native server's open.
+//! Qwen3 dense checkpoints on the CUDA backend: the folder's head, the prompt lane, the native server's open, and text.
 
 pub const config = @import("config.zig");
 pub const names = @import("names.zig");
@@ -8,6 +8,8 @@ pub const score = @import("score.zig");
 pub const gemm = @import("cuda/gemm.zig");
 pub const engine = @import("cuda/engine.zig");
 pub const native = @import("cuda/native.zig");
+/// Text checkpoints (Qwen3ForCausalLM): the recipe behind the shared dense engine.
+pub const text = @import("text_cuda.zig");
 
 test {
     _ = config;
@@ -18,4 +20,5 @@ test {
     _ = gemm;
     _ = engine;
     _ = native;
+    _ = text;
 }

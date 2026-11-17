@@ -27,18 +27,14 @@ pub fn glmCudaShared(b: *std.Build, target: std.Build.ResolvedTarget, optimize: 
     return m;
 }
 
-/// Qwen3 text checkpoints (Qwen3ForCausalLM, BF16) on CUDA: the Qwen3 recipe over the dense engine.
-pub fn qwen3TextModule(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, cuda: *std.Build.Module, core: *std.Build.Module, lanes: *std.Build.Module, dense: *std.Build.Module) *std.Build.Module {
-    return b.createModule(.{ .root_source_file = b.path("zig/src/families/qwen3/text_cuda.zig"), .target = target, .optimize = optimize, .link_libc = true, .imports = &.{ .{ .name = "cuda", .module = cuda }, .{ .name = "core", .module = core }, .{ .name = "lanes", .module = lanes }, .{ .name = "cuda_dense", .module = dense } } });
-}
-
 /// Qwen3's dense embedding and reranker checkpoints on CUDA: the family module the native server's open dispatches to.
-pub fn qwen3Module(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, cuda: *std.Build.Module, core: *std.Build.Module, lanes: *std.Build.Module, api: *std.Build.Module) *std.Build.Module {
+pub fn qwen3Module(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, cuda: *std.Build.Module, core: *std.Build.Module, lanes: *std.Build.Module, api: *std.Build.Module, dense: *std.Build.Module) *std.Build.Module {
     const m = b.createModule(.{ .root_source_file = b.path("zig/src/families/qwen3/qwen3_cuda.zig"), .target = target, .optimize = optimize, .link_libc = true });
     m.addImport("cuda", cuda);
     m.addImport("core", core);
     m.addImport("lanes", lanes);
     m.addImport("engine_api", api); // the server's engine_api: family's (qwen3_5's), the shared one
+    m.addImport("cuda_dense", dense); // text checkpoints: the Qwen3 recipe (text_cuda.zig)
     return m;
 }
 
@@ -87,7 +83,7 @@ pub fn engines(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.bu
             .{ .name = "core", .module = core },
             .{ .name = "flashnext", .module = flashnextModule(b, target, optimize, cuda, core, lanes, qwen_vision, api) },
             .{ .name = "glm_cuda", .module = glmCudaShared(b, target, optimize, cuda, core, lanes, heat, api, canon, verbs) },
-            .{ .name = "qwen3_cuda", .module = qwen3Module(b, target, optimize, cuda, core, lanes, api) },
+            .{ .name = "qwen3_cuda", .module = qwen3Module(b, target, optimize, cuda, core, lanes, api, dense) },
             .{ .name = "minimax_m3_cuda", .module = @import("minimax_cuda.zig").module(b, target, optimize, cuda, core, lanes) },
             .{ .name = "qwen35", .module = qwen35 },
             .{ .name = "kolibri1", .module = @import("kolibri.zig").module(b, target, optimize, cuda, core, lanes) },
@@ -96,7 +92,6 @@ pub fn engines(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.bu
             .{ .name = "lfm2_moe_cuda", .module = @import("lfm2_moe_cuda.zig").module(b, target, optimize, cuda, core, lanes) },
             .{ .name = "dory", .module = @import("dory.zig").module(b, target, optimize, cuda, core, lanes) },
             .{ .name = "dots_mocr_cuda", .module = @import("dots_mocr_cuda.zig").module(b, target, optimize, cuda, core, lanes, dense) },
-            .{ .name = "qwen3_text_cuda", .module = qwen3TextModule(b, target, optimize, cuda, core, lanes, dense) },
         },
     });
     mod.addImport("qwen4", @import("qwen4.zig").module(b, target, optimize, core));

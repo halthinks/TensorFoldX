@@ -166,7 +166,7 @@ pub fn open(a: Allocator, gpa: Allocator, io: std.Io, o: api.Open, problem: *[]c
     if (std.mem.eql(u8, o.model_type, "qwen4") or std.mem.eql(u8, o.model_type, "qwen4_text")) return @import("qwen4_cuda.zig").open(a, gpa, io, o, problem);
     if (std.mem.eql(u8, o.model_type, "qwen3")) {
         // a folder with a sentence-transformers head is an embedding or reranker checkpoint; any other is a text model
-        if (!qwen3HasHead(io, o.dir)) return openWith(@import("qwen3_text_cuda").native, a, gpa, io, o, problem);
+        if (!qwen3HasHead(io, o.dir)) return openWith(@import("qwen3_cuda").text.native, a, gpa, io, o, problem);
         return @import("cuda_qwen3.zig").open(a, gpa, io, o, problem, budget, windows);
     }
     inline for (registry) |F| if (std.mem.eql(u8, o.model_type, F.model_type)) return openWith(F, a, gpa, io, o, problem);
